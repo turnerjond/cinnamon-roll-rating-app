@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cinnamon Roll Rater</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#fff6e8; --ink:#291305; --blue:#b65f16; --blue-light:#ffe0b7;
+    --blue-deep:#6f2f10; --roll:#a7551b; --roll-light:#f8d29b;
+    --cream:#fffaf2; --border:#e7b879; --text-muted:#83542e; --tag-bg:#fff0ca;
+    --green:#2a7a4a; --green-bg:#edfaf3; --green-border:#4caf82;
+    --amber:#9a6500; --amber-bg:#fff7df; --amber-border:#e7b84d;
+    --red:#9d2424; --red-bg:#fff0f0; --red-border:#e68a8a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--ink);min-height:100vh}
+  body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:.6}
+
+  /* HEADER */
+  header{background:var(--blue-deep);color:#fff;padding:1.5rem 2rem;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+  header{background:radial-gradient(circle at 85% 20%,#d88b2e 0 18%,transparent 19%),linear-gradient(135deg,#7c3413,#4a1e0a);color:#fff}
+  header::after{content:'';position:absolute;right:-38px;top:-42px;width:190px;height:190px;border-radius:50%;background:repeating-radial-gradient(circle,#f5c06b 0 12px,#9d4517 13px 23px,#f5c06b 24px 35px);opacity:.18;transform:rotate(-18deg)}
+  .h-left h1{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,5vw,2.4rem);font-weight:900;letter-spacing:-.5px;line-height:1}
+  .h-left h1 span{color:#ffd087}
+  .h-left p{margin-top:.3rem;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.45)}
+  .h-stats{display:flex;gap:.75rem;flex-shrink:0;z-index:1}
+  .h-stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:.5rem .8rem;text-align:center;min-width:56px}
+  .h-stat-val{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:#ffd087;line-height:1}
+  .h-stat-lbl{font-size:.54rem;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin-top:.2rem}
+
+  /* BANNER */
+  .banner{background:var(--green-bg);border-bottom:2px solid var(--green-border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:.75rem}
+  .banner.pending{background:var(--amber-bg);border-bottom-color:var(--amber-border)}
+  .banner.pending .b-title{color:var(--amber)}
+  .banner.pending .b-sub{color:#8a6b20}
+  .banner.offline{background:var(--red-bg);border-bottom-color:var(--red-border)}
+  .banner.offline .b-title{color:var(--red)}
+  .banner.offline .b-sub{color:#8a3838}
+  .b-icon{font-size:1.1rem;flex-shrink:0}
+  .b-title{font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#1a6040}
+  .b-sub{font-size:.64rem;color:#2a8060;margin-top:.1rem}
+
+  /* TABS */
+  .tabs{display:flex;border-bottom:2px solid var(--border);background:var(--cream);padding:0 1.5rem}
+  .tab{padding:.9rem 1.4rem;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border:none;background:none;color:var(--text-muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+  .tab:hover{color:var(--blue)}
+  .tab.active{color:var(--blue-deep);border-bottom-color:var(--blue)}
+  .panel{display:none}.panel.active{display:block}
+
+  /* FORM */
+  .fw{max-width:680px;margin:0 auto;padding:1.5rem 1.5rem 4rem}
+
+  .sec{font-family:'Playfair Display',serif;font-style:italic;font-size:1.05rem;color:var(--text-muted);margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem}
+  .sec::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0}
+  .field{margin-bottom:1.4rem}
+  .field label{display:flex;justify-content:space-between;align-items:baseline;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.5rem}
+  .field label .wt{font-size:.65rem;color:var(--blue);font-weight:500}
+
+  /* STARS — bigger tap targets */
+  .stars{display:flex;gap:.4rem}
+  .sbtn{width:46px;height:46px;border:2px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:#ccc;font-weight:700;font-family:'DM Mono',monospace;font-size:.9rem;touch-action:manipulation}
+  .sbtn:hover{border-color:var(--blue);background:var(--blue-light);color:var(--blue-deep);transform:translateY(-2px)}
+  .sbtn.on{border-color:var(--blue);background:var(--blue);color:#fff;transform:translateY(-2px);box-shadow:0 4px 12px rgba(46,79,163,.3)}
+  .scale-hints{display:flex;justify-content:space-between;max-width:248px;font-size:.58rem;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.28rem}
+  .rdesc{font-size:.65rem;color:var(--text-muted);margin-top:.35rem;letter-spacing:.03em;min-height:1em}
+
+  /* TEXT FIELDS */
+  .tf{width:100%;padding:.75rem 1rem;font-family:'DM Mono',monospace;font-size:.85rem;border:2px solid var(--border);border-radius:8px;background:#fff;color:var(--ink);transition:border-color .2s;outline:none}
+  .tf:focus{border-color:var(--blue)}
+
+  /* DATE */
+  .date-input{width:100%;padding:.75rem 1rem;font-family:'DM Mono',monospace;font-size:.85rem;border:2px solid var(--border);border-radius:8px;background:#fff;color:var(--ink);outline:none;transition:border-color .2s;-webkit-appearance:none}
+  .date-input:focus{border-color:var(--blue)}
+  .date-input::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer}
+
+  /* PHOTO */
+  .photo-slot{border:2px dashed var(--border);border-radius:10px;background:#fff;padding:1rem;display:grid;grid-template-columns:88px 1fr;gap:1rem;align-items:center}
+  .photo-preview{width:88px;height:88px;border-radius:8px;background:var(--roll-light);display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--text-muted);font-size:1.8rem}
+  .photo-preview img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo-copy{font-size:.68rem;color:var(--text-muted);line-height:1.5}
+  .photo-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.55rem}
+  .file-input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .file-label,.clear-photo{border:1.5px solid var(--border);border-radius:6px;background:#fff;color:var(--blue-deep);font-family:'DM Mono',monospace;font-size:.68rem;padding:.4rem .65rem;cursor:pointer;letter-spacing:.04em;text-transform:uppercase}
+  .file-label:hover,.clear-photo:hover{border-color:var(--blue);background:var(--blue-light)}
+  .clear-photo{color:var(--text-muted)}
+
+  /* SCORE PREVIEW */
+  .sp{background:var(--blue-deep);color:#fff;border-radius:12px;padding:1.25rem 1.5rem;margin-top:2rem;display:flex;align-items:center;justify-content:space-between}
+  .sp .lbl{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+  .sp .snum{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:900;letter-spacing:-1px;color:#ffd087}
+  .sbw{flex:1;margin:0 1.5rem;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+  .sbf{height:100%;background:linear-gradient(90deg,#ffd087,#fff7dd);border-radius:3px;transition:width .4s ease}
+  .savebtn{width:100%;padding:1rem;background:var(--blue-deep);color:#fff;border:none;border-radius:10px;font-family:'Playfair Display',serif;font-size:1.1rem;font-style:italic;cursor:pointer;margin-top:1.25rem;transition:all .2s;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:.4rem}
+  .savebtn:hover{background:var(--blue);transform:translateY(-2px);box-shadow:0 6px 20px rgba(46,79,163,.35)}
+  .savebtn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+  /* RANKINGS */
+  .lbw{padding:1.5rem;max-width:800px;margin:0 auto}
+
+  /* STATS BAR */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.25rem}
+  .sg{background:white;border:2px solid var(--border);border-radius:10px;padding:.75rem 1rem;text-align:center}
+  .sg-val{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--blue-deep);line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sg-lbl{font-size:.56rem;color:var(--text-muted);letter-spacing:.09em;text-transform:uppercase;margin-top:.25rem}
+
+  /* CONTROLS ROW */
+  .controls-row{display:flex;gap:.6rem;align-items:center;margin-bottom:1.1rem;flex-wrap:wrap}
+  .lbh{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.9rem}
+  .lbt{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700}
+  .lbc{font-size:.68rem;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase}
+
+  /* SORT/FILTER CONTROLS */
+  .ctl-select{padding:.38rem .7rem;font-family:'DM Mono',monospace;font-size:.68rem;border:1.5px solid var(--border);border-radius:6px;background:white;color:var(--text-muted);cursor:pointer;outline:none;transition:border-color .15s}
+  .ctl-select:focus{border-color:var(--blue)}
+  .ctl-label{font-size:.65rem;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+
+  /* CINNAMON ROLL MASCOT */
+  .mascot-card{margin:1rem 0 1.5rem;padding:1rem;background:linear-gradient(135deg,#fff,#fff2d3);border:2px solid var(--border);border-radius:12px;display:grid;grid-template-columns:112px 1fr;gap:1rem;align-items:center;overflow:hidden}
+  .mascot-card img{width:112px;height:112px;display:block;object-fit:contain}
+  .mascot-copy{font-family:'Playfair Display',serif;font-size:1.25rem;font-style:italic;color:var(--blue-deep);line-height:1.2}
+  .mascot-sub{font-size:.64rem;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-top:.35rem}
+
+  /* ROLL CARDS */
+  .mc{background:#fff;border:2px solid var(--border);border-radius:14px;padding:1.1rem 1.3rem;margin-bottom:.85rem;display:grid;grid-template-columns:auto 1fr auto auto;gap:.85rem;align-items:center;transition:all .2s;position:relative;overflow:hidden}
+  .mc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--blue)}
+  .mc.r1::before{background:#f0a500}.mc.r2::before{background:#aaa}.mc.r3::before{background:var(--roll)}
+  .mc:hover{border-color:var(--blue);box-shadow:0 4px 20px rgba(46,79,163,.1);transform:translateY(-1px)}
+  .rb{width:40px;height:40px;border-radius:50%;background:var(--blue-light);color:var(--blue-deep);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:900;font-size:1rem;flex-shrink:0}
+  .mc.r1 .rb{background:#fef3d0;color:#a07000;font-size:1.2rem}.mc.r2 .rb{background:#f0f0f0;color:#666}.mc.r3 .rb{background:#f5e8d5;color:var(--roll)}
+  .cm{min-width:0}
+  .cs{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cm2{font-size:.66rem;color:var(--text-muted);margin-top:.2rem;letter-spacing:.04em}
+  .mphoto{width:100%;max-width:220px;aspect-ratio:4/3;border-radius:8px;margin-top:.55rem;object-fit:cover;border:1px solid var(--border);display:block}
+  .ctags{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.45rem}
+  .tag{font-size:.6rem;padding:.18rem .45rem;background:var(--tag-bg);color:var(--blue-deep);border-radius:4px;letter-spacing:.04em;text-transform:uppercase}
+
+  /* SCORE + COLOR BAR */
+  .csc{text-align:right;flex-shrink:0}
+  .bsc{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:900;line-height:1}
+  .scl{font-size:.6rem;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-top:.1rem}
+  .score-bar{height:4px;border-radius:2px;margin-top:.4rem;width:60px;background:var(--border);overflow:hidden;margin-left:auto}
+  .score-bar-fill{height:100%;border-radius:2px;transition:width .4s ease}
+
+  /* Delete — always visible */
+  .delbtn{flex-shrink:0;background:none;border:1.5px solid var(--border);border-radius:6px;padding:.35rem .5rem;font-size:.7rem;color:var(--text-muted);cursor:pointer;transition:all .15s;line-height:1;align-self:start}
+  .delbtn:hover{background:#fee;border-color:#f66;color:#c00}
+
+  /* BREAKDOWN */
+  .dtog{width:100%;background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:.66rem;color:var(--blue);text-align:left;padding:.45rem 0 0;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:.3rem}
+  .cdet{margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border);grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.5rem}
+  .di{background:var(--bg);border-radius:6px;padding:.4rem .6rem}
+  .dil{font-size:.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+  .div2{font-size:.83rem;font-weight:500;color:var(--ink);margin-top:.1rem}
+  .pr{display:flex;gap:2px;margin-top:.2rem}
+  .pip{width:10px;height:6px;border-radius:2px;background:var(--border)}
+  .pip.on{background:var(--blue)}
+
+  .empty{text-align:center;padding:4rem 2rem;color:var(--text-muted)}
+  .empty .ei{font-size:3rem;margin-bottom:1rem}
+  .empty p{font-size:.85rem;line-height:1.6}
+
+  .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--blue-deep);color:#fff;padding:.75rem 1.5rem;border-radius:40px;font-size:.78rem;font-family:'DM Mono',monospace;letter-spacing:.05em;transition:transform .35s cubic-bezier(.34,1.56,.64,1);z-index:1000;box-shadow:0 8px 30px rgba(0,0,0,.25);white-space:nowrap}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  @media(max-width:560px){
+    .stats-grid{grid-template-columns:repeat(2,1fr)}
+    .photo-slot{grid-template-columns:72px 1fr}
+    .photo-preview{width:72px;height:72px}
+    .mc{grid-template-columns:auto 1fr auto;align-items:start}
+    .csc{grid-column:2/4;text-align:left;display:flex;align-items:center;gap:.55rem;margin-top:.2rem}
+    .csc .scl{margin-top:0}
+    .score-bar{margin-left:0;width:76px;margin-top:0}
+    .delbtn{grid-column:3;grid-row:1}
+    .cdet{grid-template-columns:repeat(2,1fr)}
+    .sbtn{width:40px;height:40px}
+    .scale-hints{max-width:216px}
+    .h-stats{display:none}
+    .mascot-card{grid-template-columns:82px 1fr}
+    .mascot-card img{width:82px;height:82px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-left">
+    <h1>Cinnamon Roll <span>Rater</span></h1>
+    <p>Cinnamon Roll Rating System · Rank-Weighted Scoring</p>
+  </div>
+  <div class="h-stats">
+    <div class="h-stat"><div class="h-stat-val" id="hstat-count">—</div><div class="h-stat-lbl">Rated</div></div>
+    <div class="h-stat"><div class="h-stat-val" id="hstat-avg">—</div><div class="h-stat-lbl">Avg Score</div></div>
+    <div class="h-stat"><div class="h-stat-val" id="hstat-top">—</div><div class="h-stat-lbl">Top Score</div></div>
+  </div>
+</header>
+
+<div class="banner pending" id="sync-banner">
+  <div class="b-icon" id="sync-icon">☁️</div>
+  <div class="b-text">
+    <div class="b-title" id="sync-title">Checking Google Sheets</div>
+    <div class="b-sub" id="sync-sub">Ratings are saved locally first, then synced when available</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('rate',this)">Rate a Roll</button>
+  <button class="tab" onclick="switchTab('board',this)">📋 Rankings</button>
+</div>
+
+<!-- RATE PANEL -->
+<div id="panel-rate" class="panel active">
+  <div class="fw">
+
+    <div class="mascot-card" aria-label="Cute cinnamon roll mascot">
+      <img src="cinnamon-roll-mascot.png" alt="Smiling frosted cinnamon roll cartoon">
+      <div>
+        <div class="mascot-copy">Vivian's Cinnamon Roll Rating App</div>
+        <div class="mascot-sub">frosting first · cinnamon close behind</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="activity-date">Date <span class="wt">editable</span></label>
+      <input type="date" class="date-input" id="activity-date">
+    </div>
+
+    <div class="field">
+      <label for="store">Store / Source <span class="wt">required</span></label>
+      <input type="text" class="tf" id="store" placeholder="e.g. Cinnabon, local bakery, homemade..." autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="photo-upload">Photo <span class="wt">optional</span></label>
+      <div class="photo-slot">
+        <div class="photo-preview" id="photo-preview" aria-live="polite">📷</div>
+        <div>
+          <div class="photo-copy">Add a cinnamon roll photo for the rankings card.</div>
+          <div class="photo-actions">
+            <input class="file-input" type="file" id="photo-upload" accept="image/*">
+            <label class="file-label" for="photo-upload">Choose photo</label>
+            <button type="button" class="clear-photo" id="clear-photo" onclick="clearPhoto()" hidden>Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">Cinnamon Roll Quality</div>
+    <div class="field"><label>How much frosting <span class="wt">Rank 1 · 28.6%</span></label><div class="stars" id="stars-frosting"></div><div class="rdesc" id="desc-frosting"></div></div>
+    <div class="field"><label>Does it taste cinnamony? <span class="wt">Rank 2 · 23.8%</span></label><div class="stars" id="stars-cinnamon"></div><div class="rdesc" id="desc-cinnamon"></div></div>
+    <div class="field"><label>Size <span class="wt">Rank 3 · 19.0%</span></label><div class="stars" id="stars-size"></div><div class="rdesc" id="desc-size"></div></div>
+    <div class="field"><label>Fluffiness <span class="wt">Rank 4 · 14.3%</span></label><div class="stars" id="stars-fluffiness"></div><div class="rdesc" id="desc-fluffiness"></div></div>
+    <div class="field"><label>Thick or not? <span class="wt">Rank 5 · 9.5%</span></label><div class="stars" id="stars-thickness"></div><div class="rdesc" id="desc-thickness"></div></div>
+    <div class="field"><label>Baked well <span class="wt">Rank 6 · 4.8%</span></label><div class="stars" id="stars-baked"></div><div class="rdesc" id="desc-baked"></div></div>
+
+    <div class="sp">
+      <div><div class="lbl">Weighted Score</div><div class="snum" id="live-score">—</div></div>
+      <div class="sbw"><div class="sbf" id="score-bar" style="width:0%"></div></div>
+      <div style="text-align:right"><div class="lbl">Out of</div><div class="snum" style="color:rgba(255,255,255,.3)">5.00</div></div>
+    </div>
+    <button class="savebtn" id="savebtn" onclick="submitRoll()">Save this roll →</button>
+  </div>
+</div>
+
+<!-- RANKINGS PANEL -->
+<div id="panel-board" class="panel">
+  <div class="lbw">
+    <div class="lbh">
+      <div class="lbt">Rankings</div>
+      <div class="lbc" id="lbc">0 rolls rated</div>
+    </div>
+
+    <!-- STATS SUMMARY -->
+    <div class="stats-grid">
+      <div class="sg"><div class="sg-val" id="sg-count">—</div><div class="sg-lbl">Total Rated</div></div>
+      <div class="sg"><div class="sg-val" id="sg-avg">—</div><div class="sg-lbl">Avg Score</div></div>
+      <div class="sg"><div class="sg-val" id="sg-best">—</div><div class="sg-lbl">Best Store</div></div>
+      <div class="sg"><div class="sg-val" id="sg-top">—</div><div class="sg-lbl">Top Score</div></div>
+    </div>
+
+    <!-- SORT & FILTER CONTROLS -->
+    <div class="controls-row">
+      <span class="ctl-label">Sort:</span>
+      <select class="ctl-select" id="sort-select" onchange="renderBoard()">
+        <option value="score-desc">Score ↓</option>
+        <option value="score-asc">Score ↑</option>
+        <option value="date-desc">Newest first</option>
+        <option value="date-asc">Oldest first</option>
+        <option value="store-az">Store A–Z</option>
+      </select>
+      <span class="ctl-label" style="margin-left:.4rem">Filter:</span>
+      <select class="ctl-select" id="store-filter" onchange="renderBoard()">
+        <option value="all">All stores</option>
+      </select>
+    </div>
+
+    <div id="lb"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CRITERIA=[
+  {id:'frosting',   label:'How much frosting',          rank:1, weight:6/21},
+  {id:'cinnamon',   label:'Does it taste cinnamony?',   rank:2, weight:5/21},
+  {id:'size',       label:'Size',                       rank:3, weight:4/21},
+  {id:'fluffiness', label:'Fluffiness',                 rank:4, weight:3/21},
+  {id:'thickness',  label:'Thick or not?',              rank:5, weight:2/21},
+  {id:'baked',      label:'Baked well',                 rank:6, weight:1/21},
+];
+const DESCS={1:'Poor',2:'Below average',3:'Decent',4:'Very good',5:'Exceptional'};
+let photoData='';
+
+const GOOGLE_SHEET_URL='https://docs.google.com/spreadsheets/d/1_M5DZjPhPeGTn9WD3NGWS_Yp-VHI1e99U7HDIjjEbko/edit?usp=sharing';
+const GOOGLE_SHEET_ID='1_M5DZjPhPeGTn9WD3NGWS_Yp-VHI1e99U7HDIjjEbko';
+const GS_URL='https://script.google.com/macros/s/AKfycbwhlPI3ltLIzXBPPwvh84cCEZlk-3Mnv5h73NEtrr1gTysBEfMzWuH4KC64beHiAEuG/exec';
+
+async function gsRead(){if(!GS_URL)throw new Error('Missing Apps Script URL');const r=await fetch(GS_URL+'?action=read',{method:'GET',redirect:'follow'});return r.json()}
+async function gsWrite(p){if(!GS_URL)throw new Error('Missing Apps Script URL');await fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)})}
+async function gsAdd(e){await gsWrite({action:'add',entry:e})}
+async function gsDelete(id){await gsWrite({action:'delete',id})}
+function gsConfigured(){return Boolean(GS_URL)}
+
+const LOCAL_STORAGE_KEY='cinnamonRollsV1';
+function lLoad(){try{return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)||'[]')}catch{return[]}}
+function lSave(a){localStorage.setItem(LOCAL_STORAGE_KEY,JSON.stringify(a))}
+
+function setSyncStatus(state,title,sub,icon){
+  const b=document.getElementById('sync-banner');
+  b.className='banner '+state;
+  document.getElementById('sync-title').textContent=title;
+  document.getElementById('sync-sub').textContent=sub;
+  document.getElementById('sync-icon').textContent=icon;
+}
+
+// ── Score colour ───────────────────────────────────────────
+function scoreColor(s){
+  // 0–2.5 red→amber, 2.5–3.5 amber→yellow-green, 3.5–5 green
+  if(s>=4.0) return '#2a7a4a';
+  if(s>=3.5) return '#5a9a2a';
+  if(s>=3.0) return '#c8860a';
+  if(s>=2.0) return '#c85a0a';
+  return '#c83030';
+}
+
+// ── Date helper ────────────────────────────────────────────
+function todayISO(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// ── Stars ──────────────────────────────────────────────────
+const ratings={};
+CRITERIA.forEach(c=>{
+  const w=document.getElementById('stars-'+c.id);
+  w.setAttribute('role','group');
+  w.setAttribute('aria-label',c.label+' rating, 1 poor to 5 exceptional');
+  w.insertAdjacentHTML('beforebegin','<div class="scale-hints" aria-hidden="true"><span>1 Poor</span><span>5 Exceptional</span></div>');
+  for(let i=1;i<=5;i++){
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='sbtn';b.textContent=i;b.dataset.v=i;
+    b.setAttribute('aria-label',c.label+': '+i+' of 5, '+DESCS[i]);
+    b.setAttribute('aria-pressed','false');
+    b.title=DESCS[i];
+    b.onclick=()=>setR(c.id,i);w.appendChild(b);
+  }
+});
+
+function setR(id,v){
+  ratings[id]=v;
+  document.getElementById('stars-'+id).querySelectorAll('.sbtn').forEach(b=>{
+    const on=+b.dataset.v<=v;
+    b.classList.toggle('on',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+  });
+  document.getElementById('desc-'+id).textContent=DESCS[v];
+  liveScore();
+}
+
+function calcScore(r){return CRITERIA.reduce((s,c)=>s+(r[c.id]||0)*c.weight,0)}
+
+function liveScore(){
+  if(!CRITERIA.some(c=>ratings[c.id])){
+    document.getElementById('live-score').textContent='—';
+    document.getElementById('score-bar').style.width='0%';return;
+  }
+  const s=calcScore(ratings);
+  document.getElementById('live-score').textContent=s.toFixed(2);
+  document.getElementById('score-bar').style.width=(s/5*100)+'%';
+}
+
+async function handlePhoto(e){
+  const file=e.target.files&&e.target.files[0];
+  if(!file)return;
+  if(!file.type.startsWith('image/')){
+    showToast('Please choose an image file');
+    e.target.value='';
+    return;
+  }
+  try{
+    photoData=await resizePhoto(file);
+    document.getElementById('photo-preview').innerHTML='<img src="'+photoData+'" alt="Selected cinnamon roll photo">';
+    document.getElementById('clear-photo').hidden=false;
+  }catch{
+    showToast('Could not load that photo');
+    clearPhoto();
+  }
+}
+
+function resizePhoto(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onerror=reject;
+    reader.onload=()=>{
+      const img=new Image();
+      img.onerror=reject;
+      img.onload=()=>{
+        const max=900;
+        const scale=Math.min(1,max/Math.max(img.width,img.height));
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.round(img.width*scale);
+        canvas.height=Math.round(img.height*scale);
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        resolve(canvas.toDataURL('image/jpeg',.78));
+      };
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function clearPhoto(){
+  photoData='';
+  document.getElementById('photo-upload').value='';
+  document.getElementById('photo-preview').textContent='📷';
+  document.getElementById('clear-photo').hidden=true;
+}
+
+
+// ── Tabs ───────────────────────────────────────────────────
+function switchTab(t,btn){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+t).classList.add('active');
+  if(t==='board') renderBoard();
+}
+
+// ── Submit ─────────────────────────────────────────────────
+async function submitRoll(){
+  const store=document.getElementById('store').value.trim();
+  if(!store){showToast('Please enter a store name');return}
+  const miss=CRITERIA.filter(c=>!ratings[c.id]);
+  if(miss.length){showToast('Still need: '+miss.map(c=>c.label).join(', '));return}
+  const dateVal=document.getElementById('activity-date').value;
+  if(!dateVal){showToast('Please pick a date');return}
+
+  const entry={
+    id:Date.now(),
+    date:new Date(dateVal+'T12:00:00').toISOString(),
+    store,
+    ratings:{...ratings},
+    score:calcScore(ratings),
+    photo:photoData
+  };
+
+  const btn=document.getElementById('savebtn');
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span>Saving…';
+  try{
+    const cache=lLoad();cache.push(entry);lSave(cache);
+    if(!gsConfigured()){
+      resetForm();
+      setSyncStatus('offline','Saved locally','Add the Apps Script web app URL to sync with the cinnamon roll sheet','!');
+      showToast('Saved locally. Add Apps Script URL to sync.');
+      setTimeout(()=>document.querySelectorAll('.tab')[1].click(),700);
+      return;
+    }
+    setSyncStatus('pending','Saving to Google Sheets','A local copy has already been saved','☁️');
+    await gsAdd(entry);
+    resetForm();
+    setSyncStatus('','Google Sheets sync active','Latest rating was sent for sync','✓');
+    showToast('Saved! Score: '+entry.score.toFixed(2));
+    setTimeout(()=>document.querySelectorAll('.tab')[1].click(),700);
+  }catch(err){
+    resetForm();
+    setSyncStatus('offline','Saved locally','Google Sheets could not be reached just now','!');
+    showToast('⚠ Saved locally as backup');
+    setTimeout(()=>document.querySelectorAll('.tab')[1].click(),700);
+  }finally{btn.disabled=false;btn.textContent='Save this roll →'}
+}
+
+function resetForm(){
+  CRITERIA.forEach(c=>{
+    delete ratings[c.id];
+    document.getElementById('stars-'+c.id).querySelectorAll('.sbtn').forEach(b=>b.classList.remove('on'));
+    document.getElementById('desc-'+c.id).textContent='';
+  });
+  document.getElementById('store').value='';
+  document.getElementById('activity-date').value=todayISO();
+  clearPhoto();
+  document.getElementById('live-score').textContent='—';
+  document.getElementById('score-bar').style.width='0%';
+}
+
+// ── Rankings ───────────────────────────────────────────────
+async function renderBoard(){
+  const lb=document.getElementById('lb');
+  const cached=lLoad();
+  if(cached.length) renderBoardFromData(cached);
+  else lb.innerHTML='<div class="empty"><div class="ei">⏳</div><p>Loading…</p></div>';
+
+  if(!gsConfigured()){
+    setSyncStatus('offline','Local ratings only','Paste the Apps Script web app URL to sync with the shared cinnamon roll sheet','!');
+    if(!cached.length) lb.innerHTML='<div class="empty"><div class="ei">◎</div><p>No local cinnamon rolls yet.</p></div>';
+    return;
+  }
+
+  try{
+    setSyncStatus('pending','Checking Google Sheets','Refreshing rankings from the shared sheet','☁️');
+    const fresh=await gsRead();
+    if(!Array.isArray(fresh))throw new Error();
+    lSave(fresh);
+    renderBoardFromData(fresh);
+    setSyncStatus('','Google Sheets sync active','Rankings are up to date on this device','✓');
+  }catch{
+    setSyncStatus('offline','Using local ratings','Google Sheets could not be reached just now','!');
+    if(!cached.length) lb.innerHTML='<div class="empty"><div class="ei">⚠️</div><p>Could not load. Check connection.</p></div>';
+  }
+}
+
+function renderBoardFromData(arr){
+  // Update store filter dropdown
+  const filterEl=document.getElementById('store-filter');
+  const currentFilter=filterEl.value;
+  const stores=[...new Set(arr.map(m=>m.store))].sort();
+  filterEl.innerHTML='<option value="all">All stores</option>'+
+    stores.map(s=>`<option value="${esc(s)}"${s===currentFilter?' selected':''}>${esc(s)}</option>`).join('');
+
+  // Apply store filter
+  const filterVal=filterEl.value;
+  let data=filterVal==='all'?[...arr]:arr.filter(m=>m.store===filterVal);
+
+  // Sort
+  const sort=document.getElementById('sort-select').value;
+  if(sort==='score-desc') data.sort((a,b)=>b.score-a.score);
+  else if(sort==='score-asc') data.sort((a,b)=>a.score-b.score);
+  else if(sort==='date-desc') data.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  else if(sort==='date-asc') data.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  else if(sort==='store-az') data.sort((a,b)=>a.store.localeCompare(b.store));
+
+  // Stats (always from full unfiltered arr)
+  updateSummaryStats(arr);
+
+  document.getElementById('lbc').textContent=data.length+' roll'+(data.length!==1?'s':'')+' rated'+(filterVal!=='all'?' at '+filterVal:'');
+
+  if(!data.length){
+    document.getElementById('lb').innerHTML='<div class="empty"><div class="ei">◎</div><p>No cinnamon rolls yet.</p></div>';
+    return;
+  }
+
+  document.getElementById('lb').innerHTML=data.map((m,i)=>{
+    const rk=i+1,rc=rk<=3&&filterVal==='all'&&sort==='score-desc'?'r'+rk:'';
+    const re=rc==='r1'?'🥇':rc==='r2'?'🥈':rc==='r3'?'🥉':rk;
+    const ds=new Date(m.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const pct=((m.score/5)*100).toFixed(0);
+    const col=scoreColor(+m.score);
+    const barW=((+m.score/5)*100).toFixed(1);
+    const photo=m.photo?'<img class="mphoto" src="'+esc(m.photo)+'" alt="Photo of cinnamon roll from '+esc(m.store)+'">':'';
+    const det=CRITERIA.map(c=>{
+      const v=m.ratings[c.id]||0;
+      const pips=[1,2,3,4,5].map(p=>'<div class="pip'+(p<=v?' on':'')+'"></div>').join('');
+      return '<div class="di"><div class="dil">'+c.label+' <span style="color:var(--blue)">R'+c.rank+' · '+(c.weight*100).toFixed(1)+'%</span></div><div class="div2">'+v+'/5</div><div class="pr">'+pips+'</div></div>';
+    }).join('');
+    const tags=CRITERIA.filter(c=>m.ratings[c.id]===5).map(c=>'<span class="tag">★ '+c.label+'</span>').join('');
+    return '<div class="mc '+rc+'">'
+      +'<div class="rb">'+re+'</div>'
+      +'<div class="cm">'
+        +'<div class="cs">'+esc(m.store)+'</div>'
+        +'<div class="cm2">'+ds+' · '+pct+'%</div>'
+        +photo
+        +(tags?'<div class="ctags">'+tags+'</div>':'')
+        +'<button class="dtog" onclick="toggleDet(this)">▾ breakdown</button>'
+        +'<div class="cdet" style="display:none">'+det+'</div>'
+      +'</div>'
+      +'<div class="csc">'
+        +'<div class="bsc" style="color:'+col+'">'+(+m.score).toFixed(2)+'</div>'
+        +'<div class="scl">/ 5.00</div>'
+        +'<div class="score-bar"><div class="score-bar-fill" style="width:'+barW+'%;background:'+col+'"></div></div>'
+      +'</div>'
+      +'<button class="delbtn" onclick="delRoll('+m.id+')">✕</button>'
+    +'</div>';
+  }).join('');
+}
+
+function updateSummaryStats(arr){
+  if(!arr.length){
+    ['sg-count','hstat-count'].forEach(id=>document.getElementById(id).textContent='0');
+    ['sg-avg','sg-best','sg-top','hstat-avg','hstat-top'].forEach(id=>document.getElementById(id).textContent='—');
+    return;
+  }
+  const count=arr.length;
+  const avg=(arr.reduce((s,m)=>s+(+m.score||0),0)/count);
+  const top=Math.max(...arr.map(m=>+m.score||0));
+  // Best store = highest average score across ≥2 ratings
+  const byStore={};
+  arr.forEach(m=>{
+    if(!byStore[m.store]) byStore[m.store]=[];
+    byStore[m.store].push(+m.score||0);
+  });
+  const bestStore=Object.entries(byStore)
+    .filter(([,scores])=>scores.length>=1)
+    .map(([s,scores])=>([s,scores.reduce((a,b)=>a+b,0)/scores.length]))
+    .sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('sg-count').textContent=count;
+  document.getElementById('sg-avg').textContent=avg.toFixed(2);
+  document.getElementById('sg-best').textContent=bestStore?bestStore[0]:'—';
+  document.getElementById('sg-top').textContent=top.toFixed(2);
+  // Header stats
+  document.getElementById('hstat-count').textContent=count;
+  document.getElementById('hstat-avg').textContent=avg.toFixed(2);
+  document.getElementById('hstat-top').textContent=top.toFixed(2);
+}
+
+function toggleDet(btn){
+  const d=btn.nextElementSibling,open=d.style.display!=='none';
+  d.style.display=open?'none':'grid';
+  btn.textContent=open?'▾ breakdown':'▴ breakdown';
+}
+
+async function delRoll(id){
+  if(!confirm('Remove this cinnamon roll rating?'))return;
+  lSave(lLoad().filter(m=>m.id!==id));
+  if(!gsConfigured()){
+    setSyncStatus('offline','Removed locally','Add the Apps Script web app URL to sync deletes with the shared sheet','!');
+    showToast('Removed locally');
+    renderBoard();
+    return;
+  }
+  setSyncStatus('pending','Removing from Google Sheets','The local ranking has already been updated','☁️');
+  try{
+    await gsDelete(id);
+    setSyncStatus('','Google Sheets sync active','Delete was sent for sync','✓');
+    showToast('Cinnamon roll removed');
+  }catch{
+    setSyncStatus('offline','Removed locally','Google Sheets could not be reached just now','!');
+    showToast('Removed locally');
+  }
+  renderBoard();
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ── Init ───────────────────────────────────────────────────
+document.getElementById('activity-date').value=todayISO();
+document.getElementById('photo-upload').addEventListener('change',handlePhoto);
+const cached=lLoad();
+updateSummaryStats(cached);
+if(!gsConfigured())setSyncStatus('offline','Local ratings ready','Connected sheet ID: '+GOOGLE_SHEET_ID,'!');
+</script>
+</body>
+</html>
