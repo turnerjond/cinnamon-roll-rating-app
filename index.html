@@ -317,7 +317,7 @@ let photoData='';
 
 const GOOGLE_SHEET_URL='https://docs.google.com/spreadsheets/d/1_M5DZjPhPeGTn9WD3NGWS_Yp-VHI1e99U7HDIjjEbko/edit?usp=sharing';
 const GOOGLE_SHEET_ID='1_M5DZjPhPeGTn9WD3NGWS_Yp-VHI1e99U7HDIjjEbko';
-const GS_URL='https://script.google.com/macros/s/AKfycbwhlPI3ltLIzXBPPwvh84cCEZlk-3Mnv5h73NEtrr1gTysBEfMzWuH4KC64beHiAEuG/exec';
+const GS_URL='https://script.google.com/macros/s/AKfycbw-MCiKYrzKAPqme8eFtpbKIuRefM-mFNcN303jtapgAFVqaq-NnZG1bDPe8RjtcEnx/exec';
 
 async function gsRead(){if(!GS_URL)throw new Error('Missing Apps Script URL');const r=await fetch(GS_URL+'?action=read',{method:'GET',redirect:'follow'});return r.json()}
 async function gsWrite(p){if(!GS_URL)throw new Error('Missing Apps Script URL');await fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)})}
